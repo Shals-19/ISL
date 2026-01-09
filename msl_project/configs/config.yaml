@@ -1,0 +1,119 @@
+# ============================================
+# ISL Real-Time Translation - Configuration
+# ============================================
+# Optimized for: Samsung Galaxy Tab S9 (Snapdragon 8 Gen 2)
+# Training: NVIDIA A100 GPU
+# Dataset: iSign v1.1 (127K video-text pairs)
+
+# Model Architecture - DENSE VISION TRANSFORMER FOR 6000 VIDEO OVERFITTING
+model:
+  encoder:
+    backbone: "dense_vit"      # Dense Vision Transformer for overfitting capability
+    pretrained: false
+    freeze_epochs: 0           # Don't freeze - train all from start for small dataset
+    output_dim: 512
+    # Vision Transformer specific parameters (DENSE configuration)
+    vit_hidden_dim: 1024       # DENSE: Large hidden dimension
+    vit_num_heads: 16          # DENSE: Many attention heads
+    vit_num_layers: 24         # DENSE: Deep transformer
+    vit_mlp_dim: 4096          # DENSE: Large feed-forward networks
+  
+  temporal:
+    num_queries: 32            # Compress video to 32 tokens
+    num_heads: 16              # DENSE: More attention heads
+    num_temporal_conv: 4       # DENSE: More temporal conv blocks for motion
+    kernel_size: 3
+    dropout: 0.2               # Slightly higher regularization for dense model
+  
+  decoder:
+    hidden_dim: 512
+    num_layers: 4
+    num_heads: 8
+    ff_dim: 1024               # Standard size
+    dropout: 0.1
+    max_len: 100               # Maximum output sequence length
+
+# Training Hyperparameters - OPTIMIZED FOR 6000 VIDEO DENSE OVERFITTING
+training:
+  # Batch settings - smaller batches for dense model
+  batch_size: 16               # Smaller batch for dense ViT (higher memory usage)
+  gradient_accumulation: 1     # Effective batch = 16 (no accumulation needed)
+  num_epochs: 100              # DENSE: Many epochs to allow overfitting
+  
+  # Optimizer settings (separate LRs for encoder/decoder)
+  # Lower LR for dense model to avoid divergence
+  encoder_lr: 5.0e-5           # Dense model: lower learning rate
+  decoder_lr: 1.5e-4           # Decoder: standard LR
+  weight_decay: 0.001          # Minimal weight decay to allow overfitting
+  warmup_ratio: 0.05           # 5% of total steps for warmup
+  
+  # Loss weights
+  ctc_weight: 0.3              # CTC loss weight
+  ce_weight: 0.7               # Cross-entropy weight (1 - ctc_weight)
+  label_smoothing: 0.05        # DENSE: Reduced label smoothing to allow overfitting
+  
+  # Gradient clipping - more conservative for dense model
+  max_grad_norm: 0.5
+  
+  # Early stopping
+  patience: 30                 # High patience for overfitting
+  
+  # Checkpointing
+  save_every_n_epochs: 1       # Save after EVERY epoch (recommended for long training)
+  keep_last_n_checkpoints: 5   # Keep more checkpoints
+  
+  # Mixed precision training
+  use_amp: true
+  
+  # Resume training
+  resume_from: null            # Path to checkpoint to resume from
+
+# Data Configuration
+data:
+  # Dataset paths (UPDATE THESE FOR YOUR SYSTEM)
+  video_dir: "E:/iSign-videos_v1.1"
+  csv_path: "E:/5thsem el/Approach-3/isl_realtime/iSign_v1.1.csv"
+  
+  num_frames: 16               # Frames to sample per video
+  image_size: 224              # Input image size
+  num_workers: 4               # DataLoader workers (reduced for Windows)
+  
+  # Data splits (by uid hash)
+  train_split: 0.8             # 80% for training
+  val_split: 0.1               # 10% for validation
+  test_split: 0.1              # 10% for testing
+
+# Tokenizer Configuration
+tokenizer:
+  name: "bert-base-uncased"
+  bos_id: 101                  # [CLS] token
+  eos_id: 102                  # [SEP] token
+  pad_id: 0                    # [PAD] token
+
+# Inference Configuration
+inference:
+  temperature: 0.8             # Sampling temperature
+  beam_size: 4                 # For beam search
+  length_penalty: 1.0          # Length penalty for beam search
+
+# Logging
+logging:
+  log_every_n_steps: 50
+  wandb:
+    enabled: false
+    project: "isl-translation"
+    entity: null
+
+# Export Configuration (for mobile deployment)
+export:
+  onnx:
+    opset_version: 14
+    dynamic_axes: true
+  tflite:
+    quantization: "int8"       # int8 quantization for mobile
+
+# Paths
+paths:
+  checkpoint_dir: "checkpoints"
+  log_dir: "logs"
+  export_dir: "exports"

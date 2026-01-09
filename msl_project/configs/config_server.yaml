@@ -1,0 +1,119 @@
+# ============================================
+# ISL Real-Time Translation - A100 SERVER CONFIG
+# ============================================
+# Optimized for: NVIDIA A100 GPU (40GB/80GB)
+# Training: Full iSign v1.1 dataset (127K samples)
+# Target: Samsung Galaxy Tab S9 deployment
+
+# Model Architecture - DENSE VISION TRANSFORMER FOR 6000 VIDEO OVERFITTING
+model:
+  encoder:
+    backbone: "dense_vit"      # Dense Vision Transformer for overfitting capability
+    pretrained: false
+    freeze_epochs: 0           # Don't freeze - train all from start for small dataset
+    output_dim: 512
+    # Vision Transformer specific parameters (DENSE configuration)
+    vit_hidden_dim: 1024       # DENSE: Large hidden dimension
+    vit_num_heads: 16          # DENSE: Many attention heads
+    vit_num_layers: 24         # DENSE: Deep transformer
+    vit_mlp_dim: 4096          # DENSE: Large feed-forward networks
+  
+  temporal:
+    num_queries: 32            # Compress video to 32 tokens
+    num_heads: 16              # DENSE: More attention heads
+    num_temporal_conv: 4       # DENSE: More temporal conv blocks for motion
+    kernel_size: 3
+    dropout: 0.2               # Slightly higher regularization for dense model
+  
+  decoder:
+    hidden_dim: 512
+    num_layers: 4
+    num_heads: 8
+    ff_dim: 1024               # Standard size
+    dropout: 0.1
+    max_len: 100               # Maximum output sequence length
+
+# Training Hyperparameters - A100 OPTIMIZED FOR 6000 VIDEO DENSE OVERFITTING
+training:
+  # Batch settings - A100 can handle larger batches but still dense
+  batch_size: 32               # Larger batch for A100 (40GB VRAM)
+  gradient_accumulation: 1     # Effective batch = 32
+  num_epochs: 200              # DENSE: Many epochs to allow overfitting
+  
+  # Optimizer settings (separate LRs for encoder/decoder)
+  # Lower LR for dense model to avoid divergence
+  encoder_lr: 5.0e-5           # Dense model: very low learning rate
+  decoder_lr: 1.5e-4           # Decoder: standard LR
+  weight_decay: 0.001          # Minimal weight decay to allow overfitting
+  warmup_ratio: 0.05           # 5% of total steps for warmup
+  
+  # Loss weights
+  ctc_weight: 0.3              # CTC loss weight (for streaming output)
+  ce_weight: 0.7               # Cross-entropy weight (main loss)
+  label_smoothing: 0.05        # DENSE: Reduced to allow overfitting
+  
+  # Gradient clipping - more conservative for dense model
+  max_grad_norm: 0.5
+  
+  # Early stopping
+  patience: 30                 # High patience for overfitting
+  
+  # Checkpointing
+  save_every_n_epochs: 1       # Save after EVERY epoch (recommended for 200-epoch training)
+  keep_last_n_checkpoints: 10  # Keep more checkpoints for recovery
+  
+  # Mixed precision training - CRITICAL for A100 performance
+  use_amp: true
+  
+  # Resume training
+  resume_from: null            # Set to checkpoint path to resume
+
+# Data Configuration - A100 SERVER PATHS
+data:
+  # SERVER PATHS
+  video_dir: "/media/rvcse22/CSERV/kortex_sem5/surya/videos/train"
+  csv_path: "/media/rvcse22/CSERV/kortex_sem5/new/ISL_TRANSLATION/iSign_v1.1.csv"
+  
+  num_frames: 16               # Frames to sample per video
+  image_size: 224              # Input image size
+  num_workers: 8               # More workers for faster data loading on server
+  
+  # Data splits (by VIDEO_ID, not uid - prevents data leakage)
+  train_split: 0.8             # 80% for training (~5,000 videos, ~100K segments)
+  val_split: 0.1               # 10% for validation (~625 videos, ~12K segments)
+  test_split: 0.1              # 10% for testing (~625 videos, ~12K segments)
+
+# Tokenizer Configuration
+tokenizer:
+  name: "bert-base-uncased"
+  bos_id: 101                  # [CLS] token
+  eos_id: 102                  # [SEP] token
+  pad_id: 0                    # [PAD] token
+
+# Inference Configuration
+inference:
+  temperature: 0.8             # Sampling temperature
+  beam_size: 4                 # For beam search
+  length_penalty: 1.0          # Length penalty for beam search
+
+# Logging
+logging:
+  log_every_n_steps: 100       # Log more frequently with large dataset
+  wandb:
+    enabled: false             # Set to true if you have wandb
+    project: "isl-translation"
+    entity: null
+
+# Export Configuration (for mobile deployment)
+export:
+  onnx:
+    opset_version: 14
+    dynamic_axes: true
+  tflite:
+    quantization: "int8"       # int8 quantization for mobile (~20MB)
+
+# Paths - SERVER
+paths:
+  checkpoint_dir: "checkpoints"
+  log_dir: "logs"
+  export_dir: "exports"
