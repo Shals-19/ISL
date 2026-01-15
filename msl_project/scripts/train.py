@@ -26,7 +26,12 @@ from torch.utils.data import DataLoader
 
 def load_config(config_path: str) -> dict:
     """Load configuration from YAML file."""
-    with open(config_path, 'r') as f:
+    path = Path(config_path)
+    # Resolve relative config paths against project root so the script works from any CWD
+    if not path.is_absolute():
+        path = project_root / path
+    path = path.resolve()
+    with open(path, 'r') as f:
         config = yaml.safe_load(f)
     return config
 

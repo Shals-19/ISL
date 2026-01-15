@@ -70,13 +70,13 @@ training:
 
 # Data Configuration
 data:
-  # Dataset paths (UPDATE THESE FOR YOUR SYSTEM)
-  video_dir: "E:/iSign-videos_v1.1"
-  csv_path: "E:/5thsem el/Approach-3/isl_realtime/iSign_v1.1.csv"
+  # Dataset paths - SERVER PATHS
+  video_dir: "/media/rvcse22/CSERV/kortex_sem5/surya/videos/train"
+  csv_path: "/media/rvcse22/CSERV/kortex_sem5/new/ISL_TRANSLATION/iSign_v1.1.csv"
   
   num_frames: 16               # Frames to sample per video
   image_size: 224              # Input image size
-  num_workers: 4               # DataLoader workers (reduced for Windows)
+  num_workers: 4               # DataLoader workers
   
   # Data splits (by uid hash)
   train_split: 0.8             # 80% for training

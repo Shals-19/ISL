@@ -10,6 +10,7 @@ This module provides a complete training pipeline with:
 """
 
 import os
+import sys
 import time
 import torch
 import torch.nn as nn
@@ -20,7 +21,16 @@ from pathlib import Path
 import json
 from tqdm import tqdm
 
-from .losses import HybridCTCCELoss
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import losses with robust fallback
+try:
+    from .losses import HybridCTCCELoss
+except (ImportError, ValueError):
+    # Fallback when running directly
+    from src.training.losses import HybridCTCCELoss
 
 
 class ISLTrainer:
